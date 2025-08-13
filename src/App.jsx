@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Camera, Play, Pause, RefreshCcw, ThumbsUp } from "lucide-react";
 import { motion } from "framer-motion";
-
+import { background } from "@/components/ui/background";
+<div style={{ width: '100%', height: '600px', position: 'relative' }}>
+  <DarkVeil />
+</div>
 const FACE_TASK_URL =
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 const HAND_TASK_URL =

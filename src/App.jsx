@@ -85,13 +85,15 @@ function isThumbsUp(hand) {
   return thumbTip.y < wrist.y && pinchDistance(hand) > 0.1;
 }
 
-const smooth = (prev, next, k = 0.35) =>
-  prev * (1 - k) + next * k;
+const smooth = (prev, next, k = 0.35) => prev * (1 - k) + next * k;
 
 export default function VisionTrackerPro() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
   const [running, setRunning] = useState(false);
+  const runningRef = useRef(false); // <-- drives the RAF loop
+
   const [ready, setReady] = useState(false);
   const [fps, setFps] = useState(0);
   const [faceInfo, setFaceInfo] = useState({
@@ -112,6 +114,7 @@ export default function VisionTrackerPro() {
     thumbsUp: false
   });
   const [confidence, setConfidence] = useState(0.5);
+
   const lastTimeRef = useRef(0);
   const lastCenterRef = useRef(null);
   const rafRef = useRef(0);
@@ -145,21 +148,33 @@ export default function VisionTrackerPro() {
 
   const startCamera = async () => {
     if (!ready) await initModels();
+
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
+
     const video = videoRef.current;
     video.srcObject = stream;
-    await video.play();
+    video.muted = true;
+    video.setAttribute("playsinline", "true");
+
+    await video.play(); // ensure playback actually starts
+
     setRunning(true);
+    runningRef.current = true;
+
     lastTimeRef.current = performance.now();
-    loop();
+
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(loop); // start AFTER state update
   };
 
   const stopCamera = () => {
+    runningRef.current = false;        // stop loop
     setRunning(false);
     cancelAnimationFrame(rafRef.current);
+
     const stream = videoRef.current?.srcObject;
     if (stream) stream.getTracks().forEach((t) => t.stop());
   };
@@ -168,15 +183,23 @@ export default function VisionTrackerPro() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const video = videoRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    // resize only when needed to avoid layout trashing
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+
     ctx.save();
     ctx.scale(-1, 1);
     ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
     ctx.restore();
+
     const { face, hands } = pred;
     ctx.lineWidth = 1.5;
     ctx.font = "14px ui-sans-serif, system-ui";
+
     if (face?.landmarks?.length) {
       face.landmarks.forEach((lm) => {
         ctx.beginPath();
@@ -204,17 +227,25 @@ export default function VisionTrackerPro() {
   };
 
   const loop = () => {
+    if (!runningRef.current) return; // guard in case stop happened mid-frame
+
     const video = videoRef.current;
     if (!video || video.readyState < 2) {
       rafRef.current = requestAnimationFrame(loop);
       return;
     }
+
     const faceLmk = faceLandmarkerRef.current;
     const handLmk = handLandmarkerRef.current;
-    if (!faceLmk || !handLmk) return;
+    if (!faceLmk || !handLmk) {
+      rafRef.current = requestAnimationFrame(loop);
+      return;
+    }
+
     const now = performance.now();
     const dt = (now - lastTimeRef.current) / 1000;
     lastTimeRef.current = now;
+
     const faceResult = faceLmk.detectForVideo(video, now);
     const handResult = handLmk.detectForVideo(video, now);
     const faceLandmarks = faceResult?.faceLandmarks || [];
@@ -239,6 +270,7 @@ export default function VisionTrackerPro() {
         blends.find((b) => b.categoryName === name)?.score ?? 0;
       blinkL = getBlend("eyeBlinkLeft");
       blinkR = getBlend("eyeBlinkRight");
+
       const cx = lm.reduce((s, p) => s + p.x, 0) / lm.length;
       const cy = lm.reduce((s, p) => s + p.y, 0) / lm.length;
       const center = { x: cx, y: cy };
@@ -250,6 +282,7 @@ export default function VisionTrackerPro() {
         vel = d / Math.max(dt, 1e-3);
       }
       lastCenterRef.current = center;
+
       const pose = headPose(lm);
       yaw = pose.yaw;
       pitch = pose.pitch;
@@ -286,11 +319,12 @@ export default function VisionTrackerPro() {
     draw({ face: { landmarks: faceLandmarks }, hands });
     setFps((prev) => smooth(prev, 1 / Math.max(dt, 1e-3), 0.25));
 
-    if (running) rafRef.current = requestAnimationFrame(loop);
+    rafRef.current = requestAnimationFrame(loop); // keep going using ref
   };
 
   useEffect(() => {
     return () => {
+      runningRef.current = false;
       cancelAnimationFrame(rafRef.current);
       const stream = videoRef.current?.srcObject;
       if (stream) stream.getTracks().forEach((t) => t.stop());
@@ -373,6 +407,7 @@ export default function VisionTrackerPro() {
               </div>
             </CardContent>
           </Card>
+
           <div className="grid grid-cols-1 gap-4">
             <Card>
               <CardHeader>
@@ -405,6 +440,7 @@ export default function VisionTrackerPro() {
                 </div>
               </CardContent>
             </Card>
+
             <Card className="rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-base">Face Metrics</CardTitle>
@@ -426,6 +462,7 @@ export default function VisionTrackerPro() {
                 <Metric label="Roll" value={faceInfo.roll} />
               </CardContent>
             </Card>
+
             <Card className="rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-base">Hand Metrics</CardTitle>

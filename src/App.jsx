@@ -5,8 +5,10 @@ import { Slider } from "@/components/ui/slider";
 import { Camera, Play, Pause, RefreshCcw, ThumbsUp } from "lucide-react";
 import { motion } from "framer-motion";
 
-const FACE_TASK_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-const HAND_TASK_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const FACE_TASK_URL =
+  "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const HAND_TASK_URL =
+  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
 let TasksVision;
 let FaceLandmarker;
@@ -29,7 +31,9 @@ function dist(a, b) {
 }
 
 function eyeAspectRatio(landmarks, isLeft) {
-  const idx = isLeft ? { top: 159, bottom: 145, left: 33, right: 133 } : { top: 386, bottom: 374, left: 263, right: 362 };
+  const idx = isLeft
+    ? { top: 159, bottom: 145, left: 33, right: 133 }
+    : { top: 386, bottom: 374, left: 263, right: 362 };
   const top = landmarks[idx.top];
   const bottom = landmarks[idx.bottom];
   const left = landmarks[idx.left];
@@ -62,7 +66,8 @@ function headPose(landmarks) {
   const leftEye = landmarks[33];
   const rightEye = landmarks[263];
   const nose = landmarks[1];
-  if (!leftEye || !rightEye || !nose) return { yaw: 0, pitch: 0, roll: 0 };
+  if (!leftEye || !rightEye || !nose)
+    return { yaw: 0, pitch: 0, roll: 0 };
   const dx = rightEye.x - leftEye.x;
   const dy = rightEye.y - leftEye.y;
   const roll = Math.atan2(dy, dx);
@@ -80,7 +85,8 @@ function isThumbsUp(hand) {
   return thumbTip.y < wrist.y && pinchDistance(hand) > 0.1;
 }
 
-const smooth = (prev, next, k = 0.35) => prev * (1 - k) + next * k;
+const smooth = (prev, next, k = 0.35) =>
+  prev * (1 - k) + next * k;
 
 export default function VisionTrackerPro() {
   const videoRef = useRef(null);
@@ -88,8 +94,23 @@ export default function VisionTrackerPro() {
   const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [fps, setFps] = useState(0);
-  const [faceInfo, setFaceInfo] = useState({ leftEAR: 0, rightEAR: 0, blinkLeft: 0, blinkRight: 0, mouthOpen: 0, velocity: 0, faces: 0, yaw: 0, pitch: 0, roll: 0 });
-  const [handInfo, setHandInfo] = useState({ hands: 0, pinch: 0, thumbsUp: false });
+  const [faceInfo, setFaceInfo] = useState({
+    leftEAR: 0,
+    rightEAR: 0,
+    blinkLeft: 0,
+    blinkRight: 0,
+    mouthOpen: 0,
+    velocity: 0,
+    faces: 0,
+    yaw: 0,
+    pitch: 0,
+    roll: 0
+  });
+  const [handInfo, setHandInfo] = useState({
+    hands: 0,
+    pinch: 0,
+    thumbsUp: false
+  });
   const [confidence, setConfidence] = useState(0.5);
   const lastTimeRef = useRef(0);
   const lastCenterRef = useRef(null);
@@ -99,9 +120,24 @@ export default function VisionTrackerPro() {
 
   const initModels = async () => {
     await ensureTasksVision();
-    const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
-    const face = await FaceLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath: FACE_TASK_URL }, runningMode: "VIDEO", numFaces: 2, outputFaceBlendshapes: true, minFaceDetectionConfidence: confidence, minTrackingConfidence: confidence });
-    const hands = await HandLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath: HAND_TASK_URL }, runningMode: "VIDEO", numHands: 2, minHandDetectionConfidence: confidence, minTrackingConfidence: confidence });
+    const fileset = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
+    const face = await FaceLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: FACE_TASK_URL },
+      runningMode: "VIDEO",
+      numFaces: 2,
+      outputFaceBlendshapes: true,
+      minFaceDetectionConfidence: confidence,
+      minTrackingConfidence: confidence
+    });
+    const hands = await HandLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: HAND_TASK_URL },
+      runningMode: "VIDEO",
+      numHands: 2,
+      minHandDetectionConfidence: confidence,
+      minTrackingConfidence: confidence
+    });
     faceLandmarkerRef.current = face;
     handLandmarkerRef.current = hands;
     setReady(true);
@@ -109,7 +145,10 @@ export default function VisionTrackerPro() {
 
   const startCamera = async () => {
     if (!ready) await initModels();
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
     const video = videoRef.current;
     video.srcObject = stream;
     await video.play();
@@ -179,21 +218,35 @@ export default function VisionTrackerPro() {
     const faceResult = faceLmk.detectForVideo(video, now);
     const handResult = handLmk.detectForVideo(video, now);
     const faceLandmarks = faceResult?.faceLandmarks || [];
-    let leftEAR = 0, rightEAR = 0, blinkL = 0, blinkR = 0, mouth = 0, vel = 0, yaw = 0, pitch = 0, roll = 0;
+
+    let leftEAR = 0,
+      rightEAR = 0,
+      blinkL = 0,
+      blinkR = 0,
+      mouth = 0,
+      vel = 0,
+      yaw = 0,
+      pitch = 0,
+      roll = 0;
+
     if (faceLandmarks.length) {
       const lm = faceLandmarks[0];
       leftEAR = eyeAspectRatio(lm, true);
       rightEAR = eyeAspectRatio(lm, false);
       mouth = mouthOpenRatio(lm);
       const blends = faceResult?.faceBlendshapes?.[0]?.categories || [];
-      const getBlend = (name) => blends.find((b) => b.categoryName === name)?.score ?? 0;
+      const getBlend = (name) =>
+        blends.find((b) => b.categoryName === name)?.score ?? 0;
       blinkL = getBlend("eyeBlinkLeft");
       blinkR = getBlend("eyeBlinkRight");
       const cx = lm.reduce((s, p) => s + p.x, 0) / lm.length;
       const cy = lm.reduce((s, p) => s + p.y, 0) / lm.length;
       const center = { x: cx, y: cy };
       if (lastCenterRef.current) {
-        const d = Math.hypot(center.x - lastCenterRef.current.x, center.y - lastCenterRef.current.y);
+        const d = Math.hypot(
+          center.x - lastCenterRef.current.x,
+          center.y - lastCenterRef.current.y
+        );
         vel = d / Math.max(dt, 1e-3);
       }
       lastCenterRef.current = center;
@@ -202,6 +255,7 @@ export default function VisionTrackerPro() {
       pitch = pose.pitch;
       roll = pose.roll;
     }
+
     const hands = handResult?.landmarks || [];
     let pinch = 0;
     let thumbs = false;
@@ -209,10 +263,29 @@ export default function VisionTrackerPro() {
       pinch = Math.max(...hands.map((h) => pinchDistance(h)));
       thumbs = hands.some((h) => isThumbsUp(h));
     }
-    setFaceInfo((prev) => ({ faces: faceLandmarks.length, leftEAR: smooth(prev.leftEAR, leftEAR), rightEAR: smooth(prev.rightEAR, rightEAR), blinkLeft: smooth(prev.blinkLeft, blinkL), blinkRight: smooth(prev.blinkRight, blinkR), mouthOpen: smooth(prev.mouthOpen, mouth), velocity: smooth(prev.velocity, vel), yaw: smooth(prev.yaw, yaw), pitch: smooth(prev.pitch, pitch), roll: smooth(prev.roll, roll) }));
-    setHandInfo((prev) => ({ hands: hands.length, pinch: smooth(prev.pinch, pinch), thumbsUp: thumbs }));
+
+    setFaceInfo((prev) => ({
+      faces: faceLandmarks.length,
+      leftEAR: smooth(prev.leftEAR, leftEAR),
+      rightEAR: smooth(prev.rightEAR, rightEAR),
+      blinkLeft: smooth(prev.blinkLeft, blinkL),
+      blinkRight: smooth(prev.blinkRight, blinkR),
+      mouthOpen: smooth(prev.mouthOpen, mouth),
+      velocity: smooth(prev.velocity, vel),
+      yaw: smooth(prev.yaw, yaw),
+      pitch: smooth(prev.pitch, pitch),
+      roll: smooth(prev.roll, roll)
+    }));
+
+    setHandInfo((prev) => ({
+      hands: hands.length,
+      pinch: smooth(prev.pinch, pinch),
+      thumbsUp: thumbs
+    }));
+
     draw({ face: { landmarks: faceLandmarks }, hands });
     setFps((prev) => smooth(prev, 1 / Math.max(dt, 1e-3), 0.25));
+
     if (running) rafRef.current = requestAnimationFrame(loop);
   };
 
@@ -234,40 +307,100 @@ export default function VisionTrackerPro() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-zinc-50 to-white p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
-        <motion.h1 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-2xl md:text-4xl font-bold tracking-tight mb-4">Vision Tracker Pro</motion.h1>
-        <p className="text-muted-foreground mb-6 max-w-2xl">Real‑time face & hand recognition with blink, mouth, head pose, movement metrics, pinch detection and thumbs‑up detection.</p>
+        <motion.h1
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-2xl md:text-4xl font-bold tracking-tight mb-4"
+        >
+          Vision Tracker Pro
+        </motion.h1>
+        <p className="text-muted-foreground mb-6 max-w-2xl">
+          Real-time face & hand recognition with blink, mouth, head pose,
+          movement metrics, pinch detection and thumbs-up detection.
+        </p>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           <Card className="lg:col-span-2 overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-lg md:text-xl flex items-center gap-2"><Camera className="w-5 h-5"/> Camera</CardTitle>
+              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                <Camera className="w-5 h-5" /> Camera
+              </CardTitle>
               <div className="flex items-center gap-2">
-                {!running ? (<Button onClick={startCamera} className="rounded-2xl"><Play className="mr-2 h-4 w-4"/>Start</Button>) : (<Button variant="secondary" onClick={stopCamera} className="rounded-2xl"><Pause className="mr-2 h-4 w-4"/>Pause</Button>)}
-                <Button variant="ghost" onClick={() => window.location.reload()} className="rounded-2xl"><RefreshCcw className="mr-2 h-4 w-4"/>Reset</Button>
+                {!running ? (
+                  <Button onClick={startCamera} className="rounded-2xl">
+                    <Play className="mr-2 h-4 w-4" />
+                    Start
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={stopCamera}
+                    className="rounded-2xl"
+                  >
+                    <Pause className="mr-2 h-4 w-4" />
+                    Pause
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  onClick={() => window.location.reload()}
+                  className="rounded-2xl"
+                >
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="relative aspect-video w-full bg-black/5 rounded-2xl overflow-hidden">
-                <video ref={videoRef} className="absolute inset-0 h-full w-full object-cover" playsInline muted />
-                <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-                {!running && (<div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Click Start to enable your camera</div>)}
-                <div className="absolute left-3 bottom-3 text-xs bg-white/80 backdrop-blur px-2 py-1 rounded-full shadow">FPS: {fps.toFixed(1)}</div>
+                <video
+                  ref={videoRef}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  playsInline
+                  muted
+                />
+                <canvas
+                  ref={canvasRef}
+                  className="absolute inset-0 h-full w-full"
+                />
+                {!running && (
+                  <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
+                    Click Start to enable your camera
+                  </div>
+                )}
+                <div className="absolute left-3 bottom-3 text-xs bg-white/80 backdrop-blur px-2 py-1 rounded-full shadow">
+                  FPS: {fps.toFixed(1)}
+                </div>
               </div>
             </CardContent>
           </Card>
           <div className="grid grid-cols-1 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Detection Settings</CardTitle>
+                <CardTitle className="text-base">
+                  Detection Settings
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Confidence</span>
-                      <span className="text-xs font-mono">{confidence.toFixed(2)}</span>
+                      <span className="text-sm text-muted-foreground">
+                        Confidence
+                      </span>
+                      <span className="text-xs font-mono">
+                        {confidence.toFixed(2)}
+                      </span>
                     </div>
-                    <Slider min={0.1} max={0.9} step={0.05} defaultValue={[confidence]} onValueChange={(v) => setConfidence(v[0])} />
-                    <p className="text-xs text-muted-foreground mt-2">(Takes effect next start)</p>
+                    <Slider
+                      min={0.1}
+                      max={0.9}
+                      step={0.05}
+                      defaultValue={[confidence]}
+                      onValueChange={(v) => setConfidence(v[0])}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      (Takes effect next start)
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -277,7 +410,11 @@ export default function VisionTrackerPro() {
                 <CardTitle className="text-base">Face Metrics</CardTitle>
               </CardHeader>
               <CardContent>
-                <Metric label="Faces" value={faceInfo.faces} fmt={(v) => v.toFixed(0)} />
+                <Metric
+                  label="Faces"
+                  value={faceInfo.faces}
+                  fmt={(v) => v.toFixed(0)}
+                />
                 <Metric label="Left EAR" value={faceInfo.leftEAR} />
                 <Metric label="Right EAR" value={faceInfo.rightEAR} />
                 <Metric label="Blink Left" value={faceInfo.blinkLeft} />
@@ -294,8 +431,29 @@ export default function VisionTrackerPro() {
                 <CardTitle className="text-base">Hand Metrics</CardTitle>
               </CardHeader>
               <CardContent>
-                <Metric label="Hands" value={handInfo.hands} fmt={(v) => v.toFixed(0)} />
+                <Metric
+                  label="Hands"
+                  value={handInfo.hands}
+                  fmt={(v) => v.toFixed(0)}
+                />
                 <Metric label="Max Pinch Distance" value={handInfo.pinch} />
                 <div className="flex items-center justify-between py-1">
-
-      
+                  <span className="text-sm text-muted-foreground">
+                    Thumbs Up
+                  </span>
+                  <span className="font-mono text-sm">
+                    {handInfo.thumbsUp ? (
+                      <ThumbsUp className="w-4 h-4 text-green-500 inline-block" />
+                    ) : (
+                      "No"
+                    )}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
